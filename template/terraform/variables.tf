@@ -87,5 +87,4 @@ variable "environment" {
 variable "domain" {
   description = "Domain name for the infrastructure"
   type        = string
-  default     = "brunopaz.xyz"
 }

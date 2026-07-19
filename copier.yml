@@ -17,10 +17,22 @@ project_description:
   type: str
   help: A short description of your project.
 
+github_repository:
+  type: str
+  help: GitHub repository identifier (username/repo-name).
+  validator: >-
+    {% if not (github_repository | regex_search('^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$')) %}
+    github_repository must be in the format 'username/repo-name'.
+    {% endif %}
+
 repo_url:
   type: str
   help: The homepage URL for your project.
   default: "https://github.com/{{ github_repository }}"
+
+tfc_organization:
+  type: str
+  help: Your Terraform Cloud organization name.
 
 # Global tasks
 _tasks:

@@ -11,10 +11,6 @@ includes:
     dir: terraform
     taskfile: ./terraform/Taskfile.yml
 
-  ansible:
-    dir: provision
-    taskfile: ./provision/Taskfile.yml
-
 tasks:
   default:
     desc: "Shows list of available tasks"

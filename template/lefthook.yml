@@ -15,10 +15,6 @@ pre-commit:
       glob: "*.{tf}"
       run: task tf:lint
 
-    ansible-lint:
-      glob: "provision/**/*.yml"
-      run: task ansible:lint
-
     tf-gen-docs:
       glob: "*.{tf}"
       run: task tf:docs

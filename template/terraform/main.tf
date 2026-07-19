@@ -126,7 +126,7 @@ resource "hcloud_firewall" "public" {
   labels = local.commonLabels
 }
 
-resource "cloudflare_dns_record" "whoammi" {
+resource "cloudflare_dns_record" "whoami" {
   zone_id  = var.cloudflare_zone_id
   comment  = "Managed by Terraform"
   content  = hcloud_server.webserver[0].ipv4_address

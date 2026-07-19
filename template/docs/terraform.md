@@ -6,7 +6,6 @@
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.7 |
-| <a name="requirement_ansible"></a> [ansible](#requirement\_ansible) | ~> 1.3.0 |
 | <a name="requirement_cloudflare"></a> [cloudflare](#requirement\_cloudflare) | ~> 5.0 |
 | <a name="requirement_hcloud"></a> [hcloud](#requirement\_hcloud) | ~> 1.49.0 |
 
@@ -14,7 +13,6 @@
 
 | Name | Version |
 |------|---------|
-| <a name="provider_ansible"></a> [ansible](#provider\_ansible) | 1.3.0 |
 | <a name="provider_cloudflare"></a> [cloudflare](#provider\_cloudflare) | 5.0.0 |
 | <a name="provider_hcloud"></a> [hcloud](#provider\_hcloud) | 1.49.1 |
 
@@ -26,8 +24,7 @@ No modules.
 
 | Name | Type |
 |------|------|
-| [ansible_host.webserver](https://registry.terraform.io/providers/ansible/ansible/latest/docs/resources/host) | resource |
-| [cloudflare_dns_record.whoammi](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/dns_record) | resource |
+| [cloudflare_dns_record.whoami](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/dns_record) | resource |
 | [hcloud_firewall.public](https://registry.terraform.io/providers/hetznercloud/hcloud/latest/docs/resources/firewall) | resource |
 | [hcloud_network.primary](https://registry.terraform.io/providers/hetznercloud/hcloud/latest/docs/resources/network) | resource |
 | [hcloud_network_subnet.primary_subnet](https://registry.terraform.io/providers/hetznercloud/hcloud/latest/docs/resources/network_subnet) | resource |
@@ -41,7 +38,7 @@ No modules.
 | <a name="input_cloudflare_api_token"></a> [cloudflare\_api\_token](#input\_cloudflare\_api\_token) | Cloudflare API token for managing DNS and security settings | `string` | n/a | yes |
 | <a name="input_cloudflare_zone_id"></a> [cloudflare\_zone\_id](#input\_cloudflare\_zone\_id) | Cloudflare Zone ID for the domain | `string` | n/a | yes |
 | <a name="input_dc"></a> [dc](#input\_dc) | The Hetzner Cloud datacenter where resources will be created | `string` | `"nbg1"` | no |
-| <a name="input_domain"></a> [domain](#input\_domain) | Domain name for the infrastructure | `string` | `"brunopaz.xyz"` | no |
+| <a name="input_domain"></a> [domain](#input\_domain) | Domain name for the infrastructure | `string` | n/a | yes |
 | <a name="input_environment"></a> [environment](#input\_environment) | Environment for the resources (staging or production) | `string` | `"production"` | no |
 | <a name="input_hcloud_token"></a> [hcloud\_token](#input\_hcloud\_token) | Hetzner Cloud API token | `string` | n/a | yes |
 | <a name="input_network_cidr"></a> [network\_cidr](#input\_network\_cidr) | CIDR range for the network (e.g., '10.70.0.0/16') | `string` | `"10.100.0.0/16"` | no |
