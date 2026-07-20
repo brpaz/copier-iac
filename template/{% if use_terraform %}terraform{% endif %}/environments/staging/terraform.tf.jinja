@@ -1,0 +1,30 @@
+terraform {
+  required_version = ">= 1.7"
+  required_providers {
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "~> 5.0"
+    }
+    hcloud = {
+      source  = "hetznercloud/hcloud"
+      version = "~> 1.56.0"
+    }
+  }
+
+  cloud {
+    organization = "{{ tfc_organization }}"
+
+    workspaces {
+      name    = "{{ project_slug }}-staging"
+      project = "{{ project_slug }}"
+    }
+  }
+}
+
+provider "hcloud" {
+  token = var.hcloud_token
+}
+
+provider "cloudflare" {
+  api_token = var.cloudflare_api_token
+}

@@ -3,11 +3,11 @@
 This project uses [GitHub actions](https://docs.github.com/en/actions) as CI/CD Pipeline. The following workflows are available:
 {% if use_terraform %}
 
-- **terraform** - Runs terraform to provision the infrastructure.
+- **terraform** - Lints and plans Terraform for both environments; applies production on push to `main`, or a manually-selected environment via workflow dispatch.
 {% endif %}
 {% if ansible_enabled %}
 
-- **ansible** - Lints and syntax-checks the Ansible playbook.
+- **ansible** - Lints the playbook and syntax-checks it against each environment's inventory (staging, production).
 {% endif %}
 
 ## Workflow secrets
@@ -24,6 +24,10 @@ The following workflow secrets must be set:
 | `SSH_AUTHORIZED_KEY`   | Public SSH key used for provisioning and accessing cloud instances securely.                                                                     | ✅        |
 | `SSH_PRIVATE_KEY`      | Private key matching `SSH_AUTHORIZED_KEY`, used by CI to connect to provisioned servers.                                                         | ✅        |
 {% endif %}
-{% if ansible_enabled and not use_terraform %}
-| _(none)_                | The `ansible` workflow only lints and syntax-checks the playbook; it does not connect to any host.                                               | —        |
+{% if ansible_enabled %}
+| `ANSIBLE_VAULT_PASSWORD` | Vault password, only needed once you add real encrypted `vault.yml` files (see `ansible/README.md`). A fresh project has none, so this can be left unset until then. | Optional |
+{% endif %}
+{% if use_terraform %}
+
+Terraform-related secrets apply to both the `staging` and `production` environments. `plan` always runs both environments for visibility, but `apply` never touches both in the same run: pushing to `main` applies **production** only; applying `staging` (or re-applying `production` on demand) requires manually running the workflow (`workflow_dispatch`) and picking the environment. The `apply` job maps onto a matching [GitHub Environment](https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment), so you can set stricter protection rules (required reviewers, etc.) on `production`.
 {% endif %}

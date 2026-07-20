@@ -3,12 +3,6 @@ variable "project" {
   type        = string
 }
 
-variable "hcloud_token" {
-  description = "Hetzner Cloud API token"
-  type        = string
-  sensitive   = true
-}
-
 variable "dc" {
   description = "The Hetzner Cloud datacenter where resources will be created"
   type        = string
@@ -50,12 +44,6 @@ variable "ssh_priv_key_file" {
   sensitive   = true
 }
 
-variable "cloudflare_api_token" {
-  description = "Cloudflare API token for managing DNS and security settings"
-  type        = string
-  sensitive   = true
-}
-
 variable "cloudflare_zone_id" {
   description = "Cloudflare Zone ID for the domain"
   type        = string
@@ -63,15 +51,15 @@ variable "cloudflare_zone_id" {
 }
 
 variable "network_cidr" {
-  description = "CIDR range for the network (e.g., '10.70.0.0/16')"
+  description = "CIDR range for the network (e.g., '10.0.0.0/16')"
   type        = string
-  default     = "10.100.0.0/16"
+  default     = "10.0.0.0/16"
 }
 
 variable "subnet_cidr" {
-  description = "CIDR range for the subnet (e.g., '10.70.5.0/24')"
+  description = "CIDR range for the subnet (e.g., '10.0.1.0/24')"
   type        = string
-  default     = "10.100.1.0/24"
+  default     = "10.0.1.0/24"
 }
 
 variable "environment" {

@@ -14,10 +14,20 @@ The server is bootstrapped by [Ansible](https://www.ansible.com/): Terraform cre
 {% if use_ansible %}
 {% if use_terraform %}
 
-A standalone [Ansible](https://www.ansible.com/) playbook is also included in `ansible/`, for configuring hosts independently of the Terraform-provisioned server (fill in `ansible/inventory/hosts.ini` with your own targets).
+A standalone [Ansible](https://www.ansible.com/) playbook is also included in `ansible/`, for configuring hosts independently of the Terraform-provisioned server (fill in `ansible/inventory/<env>/hosts.ini` with your own targets).
 {% else %}
-This project uses [Ansible](https://www.ansible.com/) to configure hosts. Fill in `ansible/inventory/hosts.ini` with your target host(s), then run `task ansible:playbook`.
+This project uses [Ansible](https://www.ansible.com/) to configure hosts. Fill in `ansible/inventory/<env>/hosts.ini` with your target host(s), then run `task ansible:playbook ENV=<env>`.
 {% endif %}
+{% endif %}
+{% if use_terraform and ansible_enabled %}
+
+Both Terraform and Ansible are structured around two environments out of the box: `staging` and `production`.
+{% elif use_terraform %}
+
+Terraform is structured around two environments out of the box: `staging` and `production`.
+{% elif ansible_enabled %}
+
+Ansible is structured around two environments out of the box: `staging` and `production`.
 {% endif %}
 
 
@@ -66,10 +76,11 @@ This will generate a new SSH key pair in the `<project_root>/.ssh`.
 
 Terraform supports multiple ways to provide variables. This project uses `*.tfvars` files during development and `TF_VAR` envrionment variables on CI.
 
-When you enter  on the `devenv` shell for the first time, a `terraform/terraform.tfvars` should be created containing example values. If not, you can create this file manually by running:
+Each environment (`staging`, `production`) has its own tfvars file under `terraform/environments/<env>/`. Create yours from the example:
 
 ```shell
-cp terraform/terraform.tfvars.example terraform/terraform.tfvars
+cp terraform/environments/staging/terraform.tfvars.example terraform/environments/staging/terraform.tfvars
+cp terraform/environments/production/terraform.tfvars.example terraform/environments/production/terraform.tfvars
 ```
 
 Next you need to modify your variables accordingly to the projecrt.
@@ -77,7 +88,7 @@ Next you need to modify your variables accordingly to the projecrt.
 {% if use_ansible %}
 
 > [!IMPORTANT]
-> Add your public key to `ansible/inventory/hosts.ini` (`ansible_user=...`) and point Ansible at the matching private key, e.g. via `ansible_ssh_private_key_file` in the inventory.
+> Add your public key to `ansible/inventory/<env>/hosts.ini` (`ansible_user=...`) and point Ansible at the matching private key, e.g. via `ansible_ssh_private_key_file` in the inventory.
 {% endif %}
 
 #### Run tasks

@@ -1,58 +1,73 @@
 # https://taskfile.dev
+#
+# Environment-scoped tasks take ENV as a CLI variable, e.g.:
+#   task tf:plan ENV=staging
 
 version: "3"
 
 tasks:
-  init:
-    desc: "Initialize terraform files"
-    cmds:
-      - terraform init {{.CLI_ARGS}}
-
   fmt:
-    desc: "Format terraform files"
+    desc: "Format terraform files (all modules/environments)"
     cmds:
-      - terraform fmt
+      - terraform fmt -recursive
+
+  lint:
+    desc: "Lint terraform files (all modules/environments)"
+    cmds:
+      - tflint --recursive -f compact
+
+  docs:
+    desc: "Generate terraform documentation for the infra module"
+    dir: modules/infra
+    cmds:
+      - terraform-docs .
+
+  init:
+    desc: "Initialize terraform for an environment (usage: task tf:init ENV=staging)"
+    dir: "environments/{{.ENV}}"
+    cmds:
+      - terraform init
 
   validate:
-    desc: "Validate terraform files"
+    desc: "Validate terraform for an environment (usage: task tf:validate ENV=staging)"
+    dir: "environments/{{.ENV}}"
     cmds:
       - terraform validate
 
-  lint:
-    desc: "Lint terraform files"
-    cmds:
-      - tflint -f compact
-
   plan:
-    desc: "Plan terraform files"
+    desc: "Plan terraform for an environment (usage: task tf:plan ENV=staging)"
+    dir: "environments/{{.ENV}}"
     cmds:
       - terraform plan -out=tfplan.out
     generates:
       - tfplan.out
 
   apply:
-    desc: "Apply terraform files"
-    deps:
-      - plan
+    desc: "Apply terraform for an environment (usage: task tf:apply ENV=staging)"
+    dir: "environments/{{.ENV}}"
     cmds:
       - terraform apply -auto-approve tfplan.out && rm tfplan.out
 
   destroy:
-    desc: "Destroy terraform resources"
+    desc: "Destroy terraform resources for an environment (usage: task tf:destroy ENV=staging)"
+    dir: "environments/{{.ENV}}"
     cmds:
       - terraform destroy -auto-approve
 
   state:
-    desc: "Show terraform state"
+    desc: "Show terraform state for an environment (usage: task tf:state ENV=staging)"
+    dir: "environments/{{.ENV}}"
     cmds:
       - terraform state list
 
-  graph:
-    desc: "Generate terraform graph"
+  output:
+    desc: "Show terraform outputs for an environment (usage: task tf:output ENV=staging -- -raw public_ip_address)"
+    dir: "environments/{{.ENV}}"
     cmds:
-      - terraform graph | dot -Tsvg > ../docs/terraform.svg
+      - terraform output {{.CLI_ARGS}}
 
-  docs:
-    desc: "Generate terraform documentation"
+  graph:
+    desc: "Generate terraform graph for an environment (usage: task tf:graph ENV=staging)"
+    dir: "environments/{{.ENV}}"
     cmds:
-      - terraform-docs .
+      - terraform graph | dot -Tsvg > ../../../docs/terraform.svg

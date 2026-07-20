@@ -2,3 +2,7 @@
 roles_galaxy/
 
 *.retry
+
+# Vault password - never commit this. Encrypted vault.yml files themselves
+# ARE meant to be committed.
+.vault-pass

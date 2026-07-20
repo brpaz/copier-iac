@@ -7,7 +7,7 @@ footer-from: ""
 content: ""
 
 output:
-  file: "../docs/terraform.md"
+  file: "../../../docs/terraform.md"
   mode: replace
   template: |-
     <!-- BEGIN_TF_DOCS -->

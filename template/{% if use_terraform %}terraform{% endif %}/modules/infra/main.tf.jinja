@@ -32,21 +32,10 @@ resource "hcloud_server" "webserver" {
   server_type = var.server_type
   image       = var.server_image
   location    = var.dc
-  user_data   = <<-EOF
-    #cloud-config
-    users:
-      - name: ${var.ssh_user}
-        ssh-authorized-keys:
-          - ${var.ssh_authorized_key}
-        sudo: ['ALL=(ALL) NOPASSWD:ALL']
-        groups: sudo
-        shell: /bin/bash
-{% if terraform_provisioner == 'cloud-init' %}
-    swap:
-      filename: /swapfile
-      size: "8192M"
-{% endif %}
-  EOF
+  user_data = templatefile("${path.module}/cloud-init/user-data.yaml.tftpl", {
+    ssh_user           = var.ssh_user
+    ssh_authorized_key = var.ssh_authorized_key
+  })
 
   #delete_protection = true
   labels = local.commonLabels
@@ -82,7 +71,7 @@ resource "hcloud_server" "webserver" {
 {% if terraform_provisioner == 'ansible' %}
 
   provisioner "local-exec" {
-    command = "ansible-playbook -i '${self.ipv4_address},' --private-key ${var.ssh_priv_key_file} -u ${var.ssh_user} ../ansible/playbook.yml"
+    command = "cd ${path.module}/../../../ansible && ansible-playbook -i '${self.ipv4_address},' --private-key ${var.ssh_priv_key_file} -u ${var.ssh_user} playbook.yml"
   }
 {% endif %}
 }

@@ -43,5 +43,41 @@ jobs:
       - name: Lint
         run: ansible-lint playbook.yml
 
+  syntax-check:
+    name: "Syntax check (${{ matrix.environment }})"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: [staging, production]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install Ansible
+        run: pip install ansible ansible-lint
+
+      - name: Install Galaxy dependencies
+        run: |
+          ansible-galaxy role install -r requirements.yml -p roles_galaxy
+          ansible-galaxy collection install -r requirements.yml
+
+      # Ansible validates --vault-password-file eagerly (errors even when no
+      # vault content exists to decrypt) if the file is missing or empty, so
+      # only pass it when a real password secret is actually set - harmless
+      # no-op on a fresh project, load-bearing once you add real vault files.
       - name: Syntax check
-        run: ansible-playbook --syntax-check playbook.yml
+        run: |
+          if [ -n "$ANSIBLE_VAULT_PASSWORD" ]; then
+            echo "$ANSIBLE_VAULT_PASSWORD" > .vault-pass
+            ansible-playbook -i inventory/${{ matrix.environment }}/hosts.ini --vault-password-file .vault-pass --syntax-check playbook.yml
+          else
+            ansible-playbook -i inventory/${{ matrix.environment }}/hosts.ini --syntax-check playbook.yml
+          fi
+        env:
+          ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}

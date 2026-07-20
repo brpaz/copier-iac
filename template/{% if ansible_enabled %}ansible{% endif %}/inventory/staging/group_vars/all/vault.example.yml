@@ -1,0 +1,11 @@
+---
+# Copy this file to vault.yml, fill in real secrets, then encrypt it:
+#   cp vault.example.yml vault.yml
+#   task ansible:vault-encrypt ENV=staging
+#
+# Reference vault_* variables from vars.yml (or roles/playbooks), e.g.:
+#   some_api_key: "{{ vault_some_api_key }}"
+#
+# The encrypted vault.yml is meant to be committed - that's the point of
+# vault. Only the vault password itself (.vault-pass) is gitignored.
+vault_some_api_key: "changeme"

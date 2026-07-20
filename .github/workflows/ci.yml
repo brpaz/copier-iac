@@ -28,25 +28,25 @@ jobs:
             use_terraform: "true"
             use_ansible: "false"
             terraform_provisioner: "cloud-init"
-            expect_present: "terraform/main.tf"
+            expect_present: "terraform/modules/infra/main.tf terraform/environments/staging/main.tf terraform/environments/production/main.tf"
             expect_absent: "ansible"
           - name: terraform-ansible-provisioner
             use_terraform: "true"
             use_ansible: "false"
             terraform_provisioner: "ansible"
-            expect_present: "terraform/main.tf ansible/playbook.yml"
+            expect_present: "terraform/modules/infra/main.tf ansible/playbook.yml ansible/inventory/staging/hosts.ini ansible/inventory/production/hosts.ini"
             expect_absent: ""
           - name: ansible-only
             use_terraform: "false"
             use_ansible: "true"
             terraform_provisioner: "cloud-init"
-            expect_present: "ansible/playbook.yml"
+            expect_present: "ansible/playbook.yml ansible/inventory/staging/group_vars/all/vars.yml"
             expect_absent: "terraform"
           - name: terraform-and-ansible
             use_terraform: "true"
             use_ansible: "true"
             terraform_provisioner: "cloud-init"
-            expect_present: "terraform/main.tf ansible/playbook.yml"
+            expect_present: "terraform/modules/infra/main.tf ansible/playbook.yml"
             expect_absent: ""
     steps:
       - name: Checkout

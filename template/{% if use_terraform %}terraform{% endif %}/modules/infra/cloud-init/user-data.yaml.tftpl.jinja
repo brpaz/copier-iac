@@ -1,0 +1,13 @@
+#cloud-config
+users:
+  - name: ${ssh_user}
+    ssh-authorized-keys:
+      - ${ssh_authorized_key}
+    sudo: ['ALL=(ALL) NOPASSWD:ALL']
+    groups: sudo
+    shell: /bin/bash
+{% if terraform_provisioner == 'cloud-init' %}
+swap:
+  filename: /swapfile
+  size: "8192M"
+{% endif %}

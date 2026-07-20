@@ -1,0 +1,4 @@
+---
+# Non-secret variables for this environment. Secrets go in vault.yml
+# (see vault.example.yml) instead, never here.
+common_swap_size_mb: 8192
