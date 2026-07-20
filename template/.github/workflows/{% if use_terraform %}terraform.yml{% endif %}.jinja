@@ -177,6 +177,15 @@ jobs:
       - name: Terraform Init
         run: terraform init
 
+      - name: Set private key file
+        run: |
+          mkdir -p ${{ github.workspace }}/.ssh
+          echo "$SSH_PRIVATE_KEY" > ${SSH_PRIVATE_KEY_FILE}
+          chmod 600 ${SSH_PRIVATE_KEY_FILE}
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_PRIVATE_KEY_FILE: ${{ env.TF_VAR_ssh_priv_key_file }}
+
       - name: Download plan artifact
         uses: actions/download-artifact@v6
         with:
