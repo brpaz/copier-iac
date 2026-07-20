@@ -1,7 +1,12 @@
 {
     "recommendations": [
         "redhat.vscode-yaml",
+{% if use_terraform %}
         "hashicorp.terraform",
+{% endif %}
+{% if ansible_enabled %}
+        "redhat.ansible",
+{% endif %}
         "arrterian.nix-env-selector",
         "mkhl.direnv"
     ]

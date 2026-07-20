@@ -1,19 +1,29 @@
 { pkgs, lib, config, inputs, ... }:
 
 {
+{% if use_terraform %}
   languages.terraform.enable = true;
+{% endif %}
 
   # https://devenv.sh/packages/
   packages = [
     pkgs.git
+{% if use_terraform %}
     pkgs.tflint
     pkgs.terraform-docs
+{% endif %}
+{% if ansible_enabled %}
+    pkgs.ansible
+    pkgs.ansible-lint
+{% endif %}
   ];
 
   enterShell = ''
+{% if use_terraform %}
     if [ ! -f terraform/terraform.tfvars ]; then
       cp terraform/terraform.tfvars.example terraform/terraform.tfvars
     fi
+{% endif %}
     lefthook install
   '';
 }

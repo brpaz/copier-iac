@@ -1,0 +1,24 @@
+# https://taskfile.dev
+
+version: "3"
+
+tasks:
+  galaxy-install:
+    desc: "Install Ansible Galaxy roles/collections"
+    cmds:
+      - ansible-galaxy install -r requirements.yml
+
+  lint:
+    desc: "Lint Ansible playbook and roles"
+    cmds:
+      - ansible-lint playbook.yml
+
+  syntax-check:
+    desc: "Check playbook syntax"
+    cmds:
+      - ansible-playbook --syntax-check playbook.yml
+
+  playbook:
+    desc: "Run the playbook against the inventory"
+    cmds:
+      - ansible-playbook playbook.yml

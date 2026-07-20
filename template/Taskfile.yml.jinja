@@ -7,9 +7,16 @@ env:
   SSH_KEY_NAME: "provision"
 
 includes:
+{% if use_terraform %}
   tf:
     dir: terraform
     taskfile: ./terraform/Taskfile.yml
+{% endif %}
+{% if ansible_enabled %}
+  ansible:
+    dir: ansible
+    taskfile: ./ansible/Taskfile.yml
+{% endif %}
 
 tasks:
   default:
@@ -25,4 +32,4 @@ tasks:
       COMMENT: "Provisioning key"
     cmds:
       - mkdir -p .ssh
-      - ssh-keygen -t ed25519 -C "${COMMENT}" -f .ssh/{{.SSH_KEY_NAME }} -N ""
+      - ssh-keygen -t ed25519 -C "${COMMENT}" -f .ssh/{% raw %}{{.SSH_KEY_NAME }}{% endraw %} -N ""

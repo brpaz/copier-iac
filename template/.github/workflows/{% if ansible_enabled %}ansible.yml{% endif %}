@@ -1,0 +1,48 @@
+name: "Ansible"
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "ansible/**"
+      - ".github/workflows/ansible.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "ansible/**"
+      - ".github/workflows/ansible.yml"
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: ansible
+
+jobs:
+  lint:
+    name: "Lint"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install Ansible
+        run: pip install ansible ansible-lint
+
+      - name: Install Galaxy dependencies
+        run: |
+          if [ -s requirements.yml ]; then
+            ansible-galaxy install -r requirements.yml
+          fi
+
+      - name: Lint
+        run: ansible-lint playbook.yml
+
+      - name: Syntax check
+        run: ansible-playbook --syntax-check playbook.yml

@@ -1,19 +1,29 @@
 # GitHub Actions
 
 This project uses [GitHub actions](https://docs.github.com/en/actions) as CI/CD Pipeline. The following workflows are available:
+{% if use_terraform %}
 
 - **terraform** - Runs terraform to provision the infrastructure.
+{% endif %}
+{% if ansible_enabled %}
+
+- **ansible** - Lints and syntax-checks the Ansible playbook.
+{% endif %}
 
 ## Workflow secrets
 
 The following workflow secrets must be set:
 
-
 | Secret Name            | Purpose                                                                                                                                        | Required |
 | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+{% if use_terraform %}
 | `TF_API_TOKEN`         | API token for authenticating with Terraform Cloud. Generate one [here](https://app.terraform.io/app/{{ tfc_organization }}/settings/authentication-tokens). | ✅        |
 | `CF_API_TOKEN`         | API token for authenticating with Cloudflare, used by Terraform to manage Cloudflare resources.                                                  | ✅        |
 | `CF_ZONE_ID`           | Cloudflare Zone ID, specifying which domain or zone Terraform should manage.                                                                     | ✅        |
 | `HCLOUD_TOKEN`         | Hetzner Cloud API token, allowing Terraform to manage infrastructure in Hetzner Cloud.                                                           | ✅        |
 | `SSH_AUTHORIZED_KEY`   | Public SSH key used for provisioning and accessing cloud instances securely.                                                                     | ✅        |
 | `SSH_PRIVATE_KEY`      | Private key matching `SSH_AUTHORIZED_KEY`, used by CI to connect to provisioned servers.                                                         | ✅        |
+{% endif %}
+{% if ansible_enabled and not use_terraform %}
+| _(none)_                | The `ansible` workflow only lints and syntax-checks the playbook; it does not connect to any host.                                               | —        |
+{% endif %}

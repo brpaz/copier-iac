@@ -41,9 +41,11 @@ resource "hcloud_server" "webserver" {
         sudo: ['ALL=(ALL) NOPASSWD:ALL']
         groups: sudo
         shell: /bin/bash
+{% if terraform_provisioner == 'cloud-init' %}
     swap:
       filename: /swapfile
       size: "8192M"
+{% endif %}
   EOF
 
   #delete_protection = true
@@ -77,6 +79,12 @@ resource "hcloud_server" "webserver" {
       "echo 'Cloud-init finished.'",
     ]
   }
+{% if terraform_provisioner == 'ansible' %}
+
+  provisioner "local-exec" {
+    command = "ansible-playbook -i '${self.ipv4_address},' --private-key ${var.ssh_priv_key_file} -u ${var.ssh_user} ../ansible/playbook.yml"
+  }
+{% endif %}
 }
 
 resource "hcloud_firewall" "public" {

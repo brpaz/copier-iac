@@ -1,0 +1,6 @@
+---
+# Galaxy roles/collections used by this project.
+# roles:
+#   - name: geerlingguy.docker
+collections:
+  - name: ansible.posix

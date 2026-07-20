@@ -1,3 +1,4 @@
+{% raw %}
 name: "Terraform"
 
 on:
@@ -180,6 +181,13 @@ jobs:
         uses: actions/download-artifact@v6
         with:
           name: plan
+{% endraw %}
+{% if terraform_provisioner == 'ansible' %}
+
+      - name: Install Ansible
+        run: pip install ansible
+{% endif %}
+{% raw %}
 
       - name: Terraform apply
         run: |
@@ -188,3 +196,4 @@ jobs:
             -input=false \
             -no-color \
             plan.out
+{% endraw %}

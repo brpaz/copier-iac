@@ -3,6 +3,7 @@
 pre-commit:
   parallel: true
   commands:
+{% if use_terraform %}
     tf-format:
       glob: "*.{tf}"
       run: task tf:fmt -- {staged_files}
@@ -18,3 +19,9 @@ pre-commit:
     tf-gen-docs:
       glob: "*.{tf}"
       run: task tf:docs
+{% endif %}
+{% if ansible_enabled %}
+    ansible-lint:
+      glob: "ansible/**/*.{yml,yaml}"
+      run: task ansible:lint
+{% endif %}

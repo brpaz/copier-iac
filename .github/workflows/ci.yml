@@ -18,8 +18,36 @@ env:
   PYTHON_VERSION: "3.13"
 jobs:
   test:
-    name: Test
+    name: Test (${{ matrix.name }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: terraform-cloud-init
+            use_terraform: "true"
+            use_ansible: "false"
+            terraform_provisioner: "cloud-init"
+            expect_present: "terraform/main.tf"
+            expect_absent: "ansible"
+          - name: terraform-ansible-provisioner
+            use_terraform: "true"
+            use_ansible: "false"
+            terraform_provisioner: "ansible"
+            expect_present: "terraform/main.tf ansible/playbook.yml"
+            expect_absent: ""
+          - name: ansible-only
+            use_terraform: "false"
+            use_ansible: "true"
+            terraform_provisioner: "cloud-init"
+            expect_present: "ansible/playbook.yml"
+            expect_absent: "terraform"
+          - name: terraform-and-ansible
+            use_terraform: "true"
+            use_ansible: "true"
+            terraform_provisioner: "cloud-init"
+            expect_present: "terraform/main.tf ansible/playbook.yml"
+            expect_absent: ""
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -38,29 +66,37 @@ jobs:
           copier copy -r HEAD --force --trust --skip-tasks \
             -d project_name="Test Project" \
             -d project_description="Some project" \
+            -d github_repository="brpaz/test-project" \
+            -d use_terraform=${{ matrix.use_terraform }} \
+            -d use_ansible=${{ matrix.use_ansible }} \
+            -d terraform_provisioner=${{ matrix.terraform_provisioner }} \
+            -d tfc_organization="test-org" \
             . "$tmpdir"
           echo "output_dir=$tmpdir/test-project" >> $GITHUB_OUTPUT
 
       - name: Check generated files
         run: |
           OUTPUT_DIR="${{ steps.generator.outputs.output_dir }}"
-          echo "Checking essential files in: $OUTPUT_DIR"
+          echo "Checking files in: $OUTPUT_DIR"
 
-          REQUIRED_FILES=(
-            "main.tf"
-          )
+          FAILED=0
 
-          MISSING=()
-          for file in "${REQUIRED_FILES[@]}"; do
-            if [ ! -f "$OUTPUT_DIR/$file" ]; then
-              MISSING+=("$file")
+          for file in ${{ matrix.expect_present }}; do
+            if [ ! -e "$OUTPUT_DIR/$file" ]; then
+              echo "❌ Expected present but missing: $file"
+              FAILED=1
             fi
           done
 
-          if [ ${#MISSING[@]} -eq 0 ]; then
-            echo "✅ All essential files are present!"
+          for path in ${{ matrix.expect_absent }}; do
+            if [ -e "$OUTPUT_DIR/$path" ]; then
+              echo "❌ Expected absent but found: $path"
+              FAILED=1
+            fi
+          done
+
+          if [ "$FAILED" -eq 0 ]; then
+            echo "✅ All checks passed!"
           else
-            echo "❌ Missing files:"
-            printf '  - %s\n' "${MISSING[@]}"
             exit 1
           fi

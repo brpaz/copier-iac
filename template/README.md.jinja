@@ -3,10 +3,22 @@
 > {{ project_description }}
 
 ## 📃 What is included
+{% if use_terraform %}
+This project uses [Terraform](https://terraform.io) to provision an [Hetzner Cloud](https://cloud.hetzner.com) server, with [Cloudflare](https://www.cloudflare.com) used to point a domain name at it.
+{% if terraform_provisioner == 'cloud-init' %}
+The server is bootstrapped via a simple [cloud-init](https://cloudinit.readthedocs.io/) `user_data` script (creates the provisioning user and sets up swap - extend it for your own setup).
+{% else %}
+The server is bootstrapped by [Ansible](https://www.ansible.com/): Terraform creates the provisioning user via cloud-init, then hands off to the `ansible/` playbook (which sets up swap - extend it for your own setup) as part of `terraform apply`.
+{% endif %}
+{% endif %}
+{% if use_ansible %}
+{% if use_terraform %}
 
-This project uses [Terraform](https://terraform.io) to provision an [Hetzner Cloud](https://cloud.hetzner.com) server, bootstrapped via a simple [cloud-init](https://cloudinit.readthedocs.io/) `user_data` script (creates the provisioning user and sets up swap - extend it for your own setup).
-
-[Cloudflare](https://www.cloudflare.com) is used to point a domain name at the server.
+A standalone [Ansible](https://www.ansible.com/) playbook is also included in `ansible/`, for configuring hosts independently of the Terraform-provisioned server (fill in `ansible/inventory/hosts.ini` with your own targets).
+{% else %}
+This project uses [Ansible](https://www.ansible.com/) to configure hosts. Fill in `ansible/inventory/hosts.ini` with your target host(s), then run `task ansible:playbook`.
+{% endif %}
+{% endif %}
 
 
 ## 🚀 Getting started
@@ -43,6 +55,7 @@ task gen-ssh-key
 ```
 
 This will generate a new SSH key pair in the `<project_root>/.ssh`.
+{% if use_terraform %}
 
 > [!IMPORTANT]
 > You will need to set the Terraform vars `ssh_authorized_key` and `ssh_priv_key_file` with the value of your public key and the path to the generated private ssh key, respectively.
@@ -60,6 +73,12 @@ cp terraform/terraform.tfvars.example terraform/terraform.tfvars
 ```
 
 Next you need to modify your variables accordingly to the projecrt.
+{% endif %}
+{% if use_ansible %}
+
+> [!IMPORTANT]
+> Add your public key to `ansible/inventory/hosts.ini` (`ansible_user=...`) and point Ansible at the matching private key, e.g. via `ansible_ssh_private_key_file` in the inventory.
+{% endif %}
 
 #### Run tasks
 

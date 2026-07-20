@@ -30,9 +30,38 @@ repo_url:
   help: The homepage URL for your project.
   default: "https://github.com/{{ github_repository }}"
 
+use_terraform:
+  type: bool
+  help: Include Terraform to provision infrastructure?
+  default: true
+
+use_ansible:
+  type: bool
+  help: Include a standalone Ansible playbook/role (for configuring hosts independently of Terraform)?
+  default: false
+  validator: >-
+    {% if not use_terraform and not use_ansible %}
+    You must select at least one of Terraform or Ansible.
+    {% endif %}
+
+terraform_provisioner:
+  type: str
+  help: How should Terraform bootstrap the provisioned server?
+  when: "{{ use_terraform }}"
+  choices:
+    - cloud-init
+    - ansible
+  default: cloud-init
+
+ansible_enabled:
+  type: bool
+  when: false
+  default: "{{ (use_ansible or (use_terraform and terraform_provisioner == 'ansible')) | lower }}"
+
 tfc_organization:
   type: str
   help: Your Terraform Cloud organization name.
+  when: "{{ use_terraform }}"
 
 # Global tasks
 _tasks:
