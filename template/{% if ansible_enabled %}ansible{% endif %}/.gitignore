@@ -1,0 +1,4 @@
+# Galaxy roles are installed here, not committed - see requirements.yml
+roles_galaxy/
+
+*.retry

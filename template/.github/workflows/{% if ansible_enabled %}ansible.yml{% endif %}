@@ -37,9 +37,8 @@ jobs:
 
       - name: Install Galaxy dependencies
         run: |
-          if [ -s requirements.yml ]; then
-            ansible-galaxy install -r requirements.yml
-          fi
+          ansible-galaxy role install -r requirements.yml -p roles_galaxy
+          ansible-galaxy collection install -r requirements.yml
 
       - name: Lint
         run: ansible-lint playbook.yml
