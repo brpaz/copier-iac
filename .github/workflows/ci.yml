@@ -62,7 +62,7 @@ jobs:
             -d use_ansible=${{ matrix.use_ansible }} \
             -d tfc_organization="test-org" \
             . "$tmpdir"
-          echo "output_dir=$tmpdir/test-project" >> $GITHUB_OUTPUT
+          echo "output_dir=$tmpdir" >> $GITHUB_OUTPUT
 
       - name: Check generated files
         run: |
