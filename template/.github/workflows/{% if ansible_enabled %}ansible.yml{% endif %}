@@ -15,6 +15,9 @@ on:
       - ".github/workflows/ansible.yml"
   workflow_dispatch:
 
+env:
+  PYTHON_VERSION: "3.13"
+
 defaults:
   run:
     working-directory: ansible
@@ -30,10 +33,10 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.13"
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install Ansible
-        run: pip install ansible ansible-lint
+        run: pip install -r requirements.txt
 
       - name: Install Galaxy dependencies
         run: |
@@ -44,12 +47,8 @@ jobs:
         run: ansible-lint playbook.yml
 
   syntax-check:
-    name: "Syntax check (${{ matrix.environment }})"
+    name: "Syntax check"
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        environment: [staging, production]
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -57,27 +56,22 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.13"
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install Ansible
-        run: pip install ansible ansible-lint
+        run: pip install -r requirements.txt
 
       - name: Install Galaxy dependencies
         run: |
           ansible-galaxy role install -r requirements.yml -p roles_galaxy
           ansible-galaxy collection install -r requirements.yml
 
-      # Ansible validates --vault-password-file eagerly (errors even when no
-      # vault content exists to decrypt) if the file is missing or empty, so
-      # only pass it when a real password secret is actually set - harmless
-      # no-op on a fresh project, load-bearing once you add real vault files.
+      # Uses an inline "-i localhost," inventory rather than any environment's
+      # real inventory - syntax-check doesn't need actual hosts, and this keeps
+      # CI from depending on cloud credentials/network for a dynamic inventory.
       - name: Syntax check
         run: |
-          if [ -n "$ANSIBLE_VAULT_PASSWORD" ]; then
-            echo "$ANSIBLE_VAULT_PASSWORD" > .vault-pass
-            ansible-playbook -i inventory/${{ matrix.environment }}/hosts.ini --vault-password-file .vault-pass --syntax-check playbook.yml
-          else
-            ansible-playbook -i inventory/${{ matrix.environment }}/hosts.ini --syntax-check playbook.yml
-          fi
+          echo "$ANSIBLE_VAULT_PASSWORD" > .vault-pass
+          ansible-playbook -i localhost, --vault-password-file .vault-pass --syntax-check playbook.yml
         env:
           ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}

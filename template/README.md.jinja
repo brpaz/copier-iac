@@ -4,21 +4,17 @@
 
 ## 📃 What is included
 {% if use_terraform %}
-This project uses [Terraform](https://terraform.io) to provision an [Hetzner Cloud](https://cloud.hetzner.com) server, with [Cloudflare](https://www.cloudflare.com) used to point a domain name at it.
-{% if terraform_provisioner == 'cloud-init' %}
-The server is bootstrapped via a simple [cloud-init](https://cloudinit.readthedocs.io/) `user_data` script (creates the provisioning user and sets up swap - extend it for your own setup).
-{% else %}
-The server is bootstrapped by [Ansible](https://www.ansible.com/): Terraform creates the provisioning user via cloud-init, then hands off to the `ansible/` playbook (which sets up swap - extend it for your own setup) as part of `terraform apply`.
+This project uses [Terraform](https://terraform.io) to provision an [Hetzner Cloud](https://cloud.hetzner.com) server, with [Cloudflare](https://www.cloudflare.com) used to point a domain name at it. The server is bootstrapped via a simple [cloud-init](https://cloudinit.readthedocs.io/) `user_data` script (creates the provisioning user{% if not ansible_enabled %}, sets up swap{% endif %} - extend it for your own setup).
 {% endif %}
-{% endif %}
-{% if use_ansible %}
+{% if ansible_enabled %}
 {% if use_terraform %}
 
-A standalone [Ansible](https://www.ansible.com/) playbook is also included in `ansible/`, for configuring hosts independently of the Terraform-provisioned server (fill in `ansible/inventory/<env>/hosts.ini` with your own targets).
+An [Ansible](https://www.ansible.com/) playbook is also included in `ansible/`, for configuring the provisioned host(s) after `terraform apply` (sets up swap - extend it for your own setup). Run it via `task ansible:playbook` or the `provision` GitHub Actions workflow. Its inventory is dynamic: it reads the Terraform state for each environment (see `ansible/README.md`), so there's no IP to copy by hand.
 {% else %}
 This project uses [Ansible](https://www.ansible.com/) to configure hosts. Fill in `ansible/inventory/<env>/hosts.ini` with your target host(s), then run `task ansible:playbook ENV=<env>`.
 {% endif %}
 {% endif %}
+{% if use_staging_environment %}
 {% if use_terraform and ansible_enabled %}
 
 Both Terraform and Ansible are structured around two environments out of the box: `staging` and `production`.
@@ -28,6 +24,18 @@ Terraform is structured around two environments out of the box: `staging` and `p
 {% elif ansible_enabled %}
 
 Ansible is structured around two environments out of the box: `staging` and `production`.
+{% endif %}
+{% else %}
+{% if use_terraform and ansible_enabled %}
+
+Both Terraform and Ansible are structured around a single `production` environment out of the box.
+{% elif use_terraform %}
+
+Terraform is structured around a single `production` environment out of the box.
+{% elif ansible_enabled %}
+
+Ansible is structured around a single `production` environment out of the box.
+{% endif %}
 {% endif %}
 
 
@@ -76,16 +84,18 @@ This will generate a new SSH key pair in the `<project_root>/.ssh`.
 
 Terraform supports multiple ways to provide variables. This project uses `*.tfvars` files during development and `TF_VAR` envrionment variables on CI.
 
-Each environment (`staging`, `production`) has its own tfvars file under `terraform/environments/<env>/`. Create yours from the example:
+Each environment ({% if use_staging_environment %}`staging`, {% endif %}`production`) has its own tfvars file under `terraform/environments/<env>/`. Create yours from the example:
 
 ```shell
+{% if use_staging_environment %}
 cp terraform/environments/staging/terraform.tfvars.example terraform/environments/staging/terraform.tfvars
+{% endif %}
 cp terraform/environments/production/terraform.tfvars.example terraform/environments/production/terraform.tfvars
 ```
 
 Next you need to modify your variables accordingly to the projecrt.
 {% endif %}
-{% if use_ansible %}
+{% if use_ansible and not use_terraform %}
 
 > [!IMPORTANT]
 > Add your public key to `ansible/inventory/<env>/hosts.ini` (`ansible_user=...`) and point Ansible at the matching private key, e.g. via `ansible_ssh_private_key_file` in the inventory.
@@ -98,6 +108,6 @@ This project uses [Taskfile](https://taskfile.dev/) as task runner for common ta
 
 ## Documentation
 
-For more detailed documentation, checks [docs](./docs/).
+The [docs](./docs/) folder is a [Zensical](https://zensical.org/) site covering CI/CD, managing environments, secrets, and the development environment in more detail. Preview it locally with `task docs-serve`, or read it built at `https://{{ github_repository.split('/')[0] }}.github.io/{{ github_repository.split('/')[1] }}/` once published (see [docs/ci-cd.md](docs/ci-cd.md)).
 
 

@@ -8,5 +8,11 @@ terraform {
       source  = "hetznercloud/hcloud"
       version = "~> 1.56.0"
     }
+{% if ansible_enabled %}
+    ansible = {
+      source  = "ansible/ansible"
+      version = "~> 1.4"
+    }
+{% endif %}
   }
 }

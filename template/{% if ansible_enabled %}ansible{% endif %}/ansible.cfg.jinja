@@ -11,3 +11,10 @@ roles_path = roles:roles_galaxy
 
 [ssh_connection]
 ssh_args = -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=~/.ssh/known_hosts
+{% if use_terraform %}
+
+# Enables the cloud.terraform dynamic inventory plugin (see inventory/<env>/terraform.yml),
+# which reads Terraform state instead of hardcoding IPs.
+[inventory]
+enable_plugins = host_list, script, auto, yaml, ini, toml, cloud.terraform.terraform_provider
+{% endif %}

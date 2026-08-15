@@ -68,13 +68,23 @@ resource "hcloud_server" "webserver" {
       "echo 'Cloud-init finished.'",
     ]
   }
-{% if terraform_provisioner == 'ansible' %}
-
-  provisioner "local-exec" {
-    command = "cd ${path.module}/../../../ansible && ansible-playbook -i '${self.ipv4_address},' --private-key ${var.ssh_priv_key_file} -u ${var.ssh_user} playbook.yml"
-  }
-{% endif %}
 }
+{% if ansible_enabled %}
+
+# Recorded in state purely so the cloud.terraform.terraform_provider inventory
+# plugin (see ansible/inventory/<env>/terraform.yml) can pick these hosts up
+# without hardcoding IPs.
+resource "ansible_host" "webserver" {
+  count  = var.server_count
+  name   = hcloud_server.webserver[count.index].name
+  groups = ["webservers"]
+
+  variables = {
+    ansible_host = hcloud_server.webserver[count.index].ipv4_address
+    ansible_user = var.ssh_user
+  }
+}
+{% endif %}
 
 resource "hcloud_firewall" "public" {
   name = "public"

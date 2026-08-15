@@ -24,30 +24,21 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: terraform-cloud-init
+          - name: terraform-only
             use_terraform: "true"
             use_ansible: "false"
-            terraform_provisioner: "cloud-init"
             expect_present: "terraform/modules/infra/main.tf terraform/environments/staging/main.tf terraform/environments/production/main.tf"
             expect_absent: "ansible"
-          - name: terraform-ansible-provisioner
-            use_terraform: "true"
-            use_ansible: "false"
-            terraform_provisioner: "ansible"
-            expect_present: "terraform/modules/infra/main.tf ansible/playbook.yml ansible/inventory/staging/hosts.ini ansible/inventory/production/hosts.ini"
-            expect_absent: ""
           - name: ansible-only
             use_terraform: "false"
             use_ansible: "true"
-            terraform_provisioner: "cloud-init"
-            expect_present: "ansible/playbook.yml ansible/inventory/staging/group_vars/all/vars.yml"
-            expect_absent: "terraform"
+            expect_present: "ansible/playbook.yml ansible/inventory/staging/group_vars/all/vars.yml ansible/inventory/staging/hosts.ini"
+            expect_absent: "terraform ansible/inventory/staging/terraform.yml"
           - name: terraform-and-ansible
             use_terraform: "true"
             use_ansible: "true"
-            terraform_provisioner: "cloud-init"
-            expect_present: "terraform/modules/infra/main.tf ansible/playbook.yml"
-            expect_absent: ""
+            expect_present: "terraform/modules/infra/main.tf ansible/playbook.yml ansible/inventory/staging/terraform.yml"
+            expect_absent: "ansible/inventory/staging/hosts.ini"
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -69,7 +60,6 @@ jobs:
             -d github_repository="brpaz/test-project" \
             -d use_terraform=${{ matrix.use_terraform }} \
             -d use_ansible=${{ matrix.use_ansible }} \
-            -d terraform_provisioner=${{ matrix.terraform_provisioner }} \
             -d tfc_organization="test-org" \
             . "$tmpdir"
           echo "output_dir=$tmpdir/test-project" >> $GITHUB_OUTPUT

@@ -5,8 +5,13 @@ Configuration management for the servers in this project.
 ## Inventory
 
 Each environment has its own inventory and variables under `inventory/<env>/`:
+{% if use_terraform %}
+
+- `inventory/<env>/terraform.yml` is a dynamic inventory - it reads `terraform/environments/<env>`'s state and picks up the `ansible_host` resources declared in `terraform/modules/infra`, so Terraform-provisioned hosts are picked up automatically. Requires `terraform init` to have been run there (so the state is reachable) and the `cloud.terraform` collection (`task ansible:galaxy-install`).
+{% else %}
 
 - Fill in `inventory/<env>/hosts.ini` with your target host(s).
+{% endif %}
 - `inventory/<env>/group_vars/all/vars.yml` holds non-secret per-environment overrides (e.g. `common_swap_size_mb`).
 - `inventory/<env>/group_vars/all/vault.example.yml` shows the secrets convention - copy it to `vault.yml`, fill in real values, then encrypt it (see Vault below). Never put secrets in `vars.yml`.
 

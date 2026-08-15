@@ -6,7 +6,7 @@ users:
     sudo: ['ALL=(ALL) NOPASSWD:ALL']
     groups: sudo
     shell: /bin/bash
-{% if terraform_provisioner == 'cloud-init' %}
+{% if not ansible_enabled %}
 swap:
   filename: /swapfile
   size: "8192M"

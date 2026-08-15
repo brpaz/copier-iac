@@ -1,0 +1,93 @@
+{% raw %}
+name: "Provision"
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to run the playbook against"
+        type: choice
+        options:
+{% endraw %}
+{% if use_staging_environment %}
+          - staging
+{% endif %}
+{% raw %}
+          - production
+{% endraw %}
+        default: {% if use_staging_environment %}staging{% else %}production{% endif %}
+{% raw %}
+
+env:
+  PYTHON_VERSION: "3.13"
+{% endraw %}
+{% if use_terraform %}
+  TF_VERSION: "1.10.5"
+{% endif %}
+{% raw %}
+
+# Assumes the target environment's infrastructure has already been provisioned
+# (see the "terraform" workflow) - this only (re-)runs the playbook against it.
+jobs:
+  playbook:
+    name: "Playbook (${{ inputs.environment }})"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Ansible
+        working-directory: ansible
+        run: pip install -r requirements.txt
+
+      - name: Install Galaxy dependencies
+        working-directory: ansible
+        run: |
+          ansible-galaxy role install -r requirements.yml -p roles_galaxy
+          ansible-galaxy collection install -r requirements.yml
+{% endraw %}
+{% if use_terraform %}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: {% raw %}${{ env.TF_VERSION }}{% endraw %}
+          cli_config_credentials_token: {% raw %}${{ secrets.TF_API_TOKEN }}{% endraw %}
+
+      # Only reads the environment's existing state - the dynamic inventory
+      # (ansible/inventory/<env>/terraform.yml) needs it to resolve hosts.
+      # Does not plan or apply.
+      - name: Terraform Init
+        working-directory: terraform/environments/{% raw %}${{ inputs.environment }}{% endraw %}
+        run: terraform init
+{% endif %}
+{% raw %}
+
+      - name: Set private key file
+        run: |
+          mkdir -p ${{ github.workspace }}/.ssh
+          echo "$SSH_PRIVATE_KEY" > ${{ github.workspace }}/.ssh/provision
+          chmod 600 ${{ github.workspace }}/.ssh/provision
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Run playbook
+        working-directory: ansible
+        run: |
+          echo "$ANSIBLE_VAULT_PASSWORD" > .vault-pass
+          ansible-playbook \
+            -i "inventory/${{ inputs.environment }}/" \
+            --private-key "${{ github.workspace }}/.ssh/provision" \
+            --vault-password-file .vault-pass \
+            playbook.yml
+        env:
+          ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+{% endraw %}

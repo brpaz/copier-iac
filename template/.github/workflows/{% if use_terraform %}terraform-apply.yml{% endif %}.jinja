@@ -1,0 +1,77 @@
+{% raw %}
+name: "Terraform Apply"
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+
+env:
+  TF_VERSION: "1.10.5"
+
+  # Terraform variables
+  TF_VAR_cloudflare_api_token: "${{ secrets.CF_API_TOKEN }}"
+  TF_VAR_cloudflare_zone_id: "${{ secrets.CF_ZONE_ID }}"
+  TF_VAR_hcloud_token: "${{ secrets.HCLOUD_TOKEN }}"
+  TF_VAR_ssh_authorized_key: "${{ secrets.SSH_AUTHORIZED_KEY }}"
+  TF_VAR_ssh_priv_key_file: "${{ github.workspace }}/.ssh/terraform"
+{% endraw %}
+{% if terraform_backend == "s3" %}
+  AWS_ACCESS_KEY_ID: {% raw %}${{ secrets.AWS_ACCESS_KEY_ID }}{% endraw %}
+  AWS_SECRET_ACCESS_KEY: {% raw %}${{ secrets.AWS_SECRET_ACCESS_KEY }}{% endraw %}
+{% endif %}
+{% raw %}
+
+jobs:
+  apply:
+    name: "Apply (${{ inputs.environment }})"
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    concurrency:
+      group: terraform-apply-${{ inputs.environment }}
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: terraform/environments/${{ inputs.environment }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+{% endraw %}
+{% if terraform_backend == "tfc" %}
+          cli_config_credentials_token: {% raw %}${{ secrets.TF_API_TOKEN }}{% endraw %}
+{% endif %}
+{% raw %}
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Set private key file
+        run: |
+          mkdir -p ${{ github.workspace }}/.ssh
+          echo "$SSH_PRIVATE_KEY" > ${SSH_PRIVATE_KEY_FILE}
+          chmod 600 ${SSH_PRIVATE_KEY_FILE}
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_PRIVATE_KEY_FILE: ${{ env.TF_VAR_ssh_priv_key_file }}
+
+      - name: Download plan artifact
+        uses: actions/download-artifact@v6
+        with:
+          name: plan-${{ inputs.environment }}
+          path: terraform/environments/${{ inputs.environment }}
+
+      - name: Terraform apply
+        run: |
+          terraform apply \
+            -auto-approve \
+            -input=false \
+            -no-color \
+            plan.out
+{% endraw %}

@@ -1,0 +1,10 @@
+---
+# Dynamic inventory: reads this environment's Terraform state and picks up the
+# ansible_host resources declared in terraform/modules/infra, so Terraform-
+# provisioned hosts are available without hardcoding IPs.
+#
+# Requires `terraform init` to have been run in project_path (so the state is
+# reachable) and the cloud.terraform collection installed (task ansible:galaxy-install).
+plugin: cloud.terraform.terraform_provider
+project_path: ../terraform/environments/production
+search_child_modules: true

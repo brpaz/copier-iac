@@ -1,0 +1,44 @@
+# Development Environment
+
+## Prerequisites
+
+[Devenv](https://devenv.sh/) sets up an isolated development environment with all the tools this project needs (Task{% if use_terraform %}, Terraform, tflint, terraform-docs{% endif %}{% if ansible_enabled %}, Ansible, ansible-lint{% endif %}, uv/Zensical for the docs site). Install it via the [Devenv getting started guide](https://devenv.sh/getting-started/).
+
+[Direnv](https://direnv.net/) isn't mandatory but is recommended - it loads the devenv shell and project environment variables automatically whenever you `cd` into the project. See the [installation guide](https://direnv.net/docs/installation.html).
+
+## Setting up
+
+```shell
+git clone {{ repo_url }}
+cd {{ project_slug }}
+direnv allow
+```
+
+`direnv allow` launches the `devenv` shell, which automatically runs [lefthook install](#pre-commit-hooks) on entry{% if use_terraform %}, and seeds `terraform.tfvars` from the `.example` files for each environment if not already present{% endif %} (see `devenv.nix`).
+
+## SSH keys
+
+Generate the key pair used to provision and access servers:
+
+```shell
+task gen-ssh-key
+```
+
+This writes an ed25519 key pair to `.ssh/` (gitignored). {% if use_terraform %}Point Terraform's `ssh_authorized_key` / `ssh_priv_key_file` variables at it - see [Secrets](secrets.md).{% endif %}
+
+## Task runner
+
+Everything in this project is driven through [Task](https://taskfile.dev/). Run `task -l` to list every available task, or check `Taskfile.yml` and the per-tool Taskfiles it includes:
+{% if use_terraform %}
+
+- `task tf:<subtask> ENV=<{% if use_staging_environment %}staging|{% endif %}production>` - Terraform (`terraform/Taskfile.yml`).
+{% endif %}
+{% if ansible_enabled %}
+- `task ansible:<subtask> ENV=<{% if use_staging_environment %}staging|{% endif %}production>` - Ansible (`ansible/Taskfile.yml`).
+{% endif %}
+- `task docs-serve` - live-reloading preview of the documentation site.
+- `task docs-build` - strict, one-shot build of the documentation site (output in `site/`).
+
+## Pre-commit hooks
+
+[Lefthook](https://github.com/evilmartians/lefthook) runs formatting/linting on every commit (`lefthook.yml`){% if use_terraform %}: `terraform fmt`, `terraform validate`, `tflint`, and `terraform-docs` regeneration on staged `*.tf` files{% endif %}{% if ansible_enabled %}{% if use_terraform %}, plus{% else %}:{% endif %} `ansible-lint` on staged files under `ansible/`{% endif %}. It's installed automatically the first time you enter the devenv shell.

@@ -1,0 +1,61 @@
+# Managing Environments
+
+{% if use_staging_environment %}
+This project is structured around two environments, `staging` and `production`, kept deliberately separate end to end so that an action against one can't accidentally touch the other.
+{% else %}
+This project is structured around a single `production` environment. See [Adding another environment](#adding-another-environment) below if you later need a `staging` (or any other) environment alongside it.
+{% endif %}
+{% if use_terraform %}
+
+## Terraform
+
+Each environment is its own root module under `terraform/environments/<env>/`, sharing the same `terraform/modules/infra` module but with its own state:
+
+{% if terraform_backend == "tfc" %}
+- Its own [Terraform Cloud](https://app.terraform.io) workspace (`{{ project_slug }}-<env>`, under the `{{ tfc_organization }}` organization) - chosen over workspace *tags* specifically so it's impossible to forget a `terraform workspace select` and apply against the wrong environment's state.
+{% elif terraform_backend == "s3" %}
+- Its own state key in the shared `{{ terraform_s3_bucket }}` S3 bucket (`{{ project_slug }}/<env>/terraform.tfstate`), with S3-native locking (`use_lockfile`) so concurrent runs against the same environment can't race.
+{% else %}
+- Its own local state file (`terraform.tfstate`, gitignored) - only exists on whichever machine last ran `terraform apply`. See [CI/CD](ci-cd.md) for what that means for CI.
+{% endif %}
+- Its own `terraform.tfvars` (see [Secrets](secrets.md)).
+
+```shell
+task tf:plan ENV={% if use_staging_environment %}staging{% else %}production{% endif %}
+task tf:apply ENV={% if use_staging_environment %}staging{% else %}production{% endif %}
+```
+
+{% if terraform_backend == "local" %}
+This backend doesn't run `plan`/`apply` in CI at all - see [CI/CD](ci-cd.md).
+{% elif use_staging_environment %}
+In CI, `apply` is further restricted so the two environments can never be touched by the same run - see [CI/CD](ci-cd.md).
+{% endif %}
+{% endif %}
+{% if ansible_enabled %}
+
+## Ansible
+
+Each environment has its own inventory under `ansible/inventory/<env>/`:
+{% if use_terraform %}
+
+- `inventory/<env>/terraform.yml` - dynamic inventory, reads that environment's Terraform state (see `terraform.yml`'s `project_path`).
+{% else %}
+- `inventory/<env>/hosts.ini` - the environment's target host(s).
+{% endif %}
+- `inventory/<env>/group_vars/all/vars.yml` - non-secret overrides for that environment{% if use_staging_environment %}. For example, `common_swap_size_mb` is `4096` in staging and `8192` in production - same role, different sizing per environment{% endif %}.
+- `inventory/<env>/group_vars/all/vault.yml` - secret overrides, encrypted (see [Secrets](secrets.md)).
+
+```shell
+task ansible:playbook ENV={% if use_staging_environment %}staging{% else %}production{% endif %}
+```
+{% endif %}
+
+## Adding another environment
+
+{% if use_terraform %}
+1. Copy `terraform/environments/production/` to `terraform/environments/<new-env>/`, update its `environment`/{% if terraform_backend == "tfc" %}workspace name, and create the matching Terraform Cloud workspace{% elif terraform_backend == "s3" %}state `key`{% else %}state file path{% endif %}.
+{% endif %}
+{% if ansible_enabled %}
+1. Copy `ansible/inventory/production/` to `ansible/inventory/<new-env>/`{% if use_terraform %}, and update its `terraform.yml` `project_path` to point at the new environment{% endif %}.
+{% endif %}
+1. Add `<new-env>` wherever the existing environments are enumerated: {% if use_terraform and terraform_backend != "local" %}the `terraform` workflow's `workflow_dispatch` choices, {% endif %}{% if ansible_enabled %}the `ansible` workflow's matrix, {% endif %}and this doc.

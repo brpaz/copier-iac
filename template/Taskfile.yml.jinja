@@ -33,3 +33,13 @@ tasks:
     cmds:
       - mkdir -p .ssh
       - ssh-keygen -t ed25519 -C "${COMMENT}" -f .ssh/{% raw %}{{.SSH_KEY_NAME }}{% endraw %} -N ""
+
+  docs-serve:
+    desc: "Serve the documentation site locally with live reload"
+    cmds:
+      - uv run --with zensical zensical serve -o
+
+  docs-build:
+    desc: "Build the documentation site (output in site/)"
+    cmds:
+      - uv run --with zensical zensical build --clean --strict

@@ -11,6 +11,7 @@ terraform {
     }
   }
 
+{% if terraform_backend == "tfc" %}
   cloud {
     organization = "{{ tfc_organization }}"
 
@@ -19,6 +20,19 @@ terraform {
       project = "{{ project_slug }}"
     }
   }
+{% elif terraform_backend == "s3" %}
+  backend "s3" {
+    bucket       = "{{ terraform_s3_bucket }}"
+    key          = "{{ project_slug }}/production/terraform.tfstate"
+    region       = "{{ terraform_s3_region }}"
+    use_lockfile = true
+    encrypt      = true
+  }
+{% elif terraform_backend == "local" %}
+  backend "local" {
+    path = "terraform.tfstate"
+  }
+{% endif %}
 }
 
 provider "hcloud" {

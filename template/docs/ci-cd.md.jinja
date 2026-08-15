@@ -1,0 +1,59 @@
+# CI/CD
+
+This project uses [GitHub Actions](https://docs.github.com/en/actions) for CI/CD. Workflows live in `.github/workflows/`.
+{% if use_terraform %}
+
+## terraform
+
+State backend: {% if terraform_backend == "tfc" %}Terraform Cloud{% elif terraform_backend == "s3" %}S3 (native locking){% else %}local (on-disk only){% endif %}.
+{% if terraform_backend == "local" %}
+
+With a `local` backend, state only exists on whichever machine ran `terraform apply` - it doesn't survive between ephemeral CI runners, so this workflow **only lints**; it never plans or applies in CI. Run `task tf:plan`/`task tf:apply` yourself locally.
+
+Triggered on pushes/PRs touching `terraform/**`.
+
+- **lint** - `terraform fmt -check` and `tflint` across all modules/environments, a Trivy IaC scan (`aquasecurity/trivy-action`, fails on CRITICAL/HIGH), and a check that `docs/terraform.md` (`terraform-docs`) is up to date with `terraform/modules/infra`.
+{% else %}
+
+Triggered on pushes/PRs touching `terraform/**`, plus manual dispatch, plus a daily schedule for drift detection.
+
+- **lint** - `terraform fmt -check` and `tflint` across all modules/environments, a Trivy IaC scan (`aquasecurity/trivy-action`, fails on CRITICAL/HIGH), and a check that `docs/terraform.md` (`terraform-docs`) is up to date with `terraform/modules/infra`.
+- **plan** - runs for {% if use_staging_environment %}both `staging` and `production`{% else %}`production`{% endif %} on every PR (for visibility), and posts/updates a single sticky comment per environment with the plan output.
+{% if use_staging_environment %}
+- **apply-staging** - pushing to `main` applies `staging` automatically.
+- **apply-manual** - the only path to `production`: a manual `workflow_dispatch` run with the environment picked from the dropdown. There's no automatic promotion to `production` - see [Managing Environments](environments.md) for why.
+{% else %}
+- **apply-production** - pushing to `main` applies `production` automatically.
+- **apply-manual** - manual `workflow_dispatch` re-apply, for ad hoc runs outside the normal push-to-main flow.
+{% endif %}
+- **drift** - daily scheduled `terraform plan -detailed-exitcode` against each environment; opens (or comments on) a `terraform-drift`-labeled GitHub issue if it finds out-of-band changes.
+
+  The apply job's `environment:` maps onto a matching [GitHub Environment](https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment). On repos below GitHub Enterprise, required-reviewer protection rules only work on **public** repos - on a private repo the environment mapping still scopes secrets per environment, but it won't pause the job for approval.
+{% endif %}
+{% endif %}
+{% if ansible_enabled %}
+
+## ansible
+
+Triggered on pushes/PRs touching `ansible/**`, plus manual dispatch.
+
+- **lint** - `ansible-lint` against `playbook.yml`.
+- **syntax-check** - `ansible-playbook --syntax-check` against the playbook. Uses an inline `localhost,` inventory rather than{% if use_terraform %} the real (Terraform-state-backed){% endif %} inventory - syntax-check doesn't need real hosts, and this keeps CI from depending on {% if use_terraform %}cloud credentials or Terraform state {% endif %}for a check that's really just linting.
+
+## provision
+
+Manual only (`workflow_dispatch`, environment picker) - runs the playbook against a real {% if use_staging_environment %}`staging`/`production`{% else %}`production`{% endif %} host{% if use_terraform %}. Assumes the environment's infrastructure is already provisioned: it doesn't plan or apply Terraform, only runs `terraform init` so the dynamic inventory can read the existing state{% endif %}. Uses the same `environment:`-per-run [GitHub Environment](https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment) mapping{% if use_terraform and terraform_backend != "local" %} as `terraform`'s apply jobs{% endif %}.
+{% endif %}
+
+## docs
+
+Triggered on pushes/PRs touching `docs/**` or `zensical.toml`, plus manual dispatch.
+
+- **build** - `zensical build --strict` on every push/PR, so a broken docs build fails CI before merge.
+- **deploy** - on push to `main` only: rebuilds and publishes to GitHub Pages.
+
+  Requires the repository's Pages source (Settings → Pages → Build and deployment) to be set to **GitHub Actions** - this is a one-time, per-repo setting the workflow can't set for you.
+
+## Secrets
+
+See [Secrets](secrets.md) for the full list of what each workflow needs and where to set it.

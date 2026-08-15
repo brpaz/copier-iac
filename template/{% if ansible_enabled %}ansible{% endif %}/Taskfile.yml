@@ -27,9 +27,9 @@ tasks:
     cmds:
       - |
         if [ -f .vault-pass ]; then
-          ansible-playbook -i inventory/{{.ENV}}/hosts.ini --vault-password-file .vault-pass playbook.yml
+          ansible-playbook -i inventory/{{.ENV}}/ --vault-password-file .vault-pass playbook.yml
         else
-          ansible-playbook -i inventory/{{.ENV}}/hosts.ini playbook.yml
+          ansible-playbook -i inventory/{{.ENV}}/ playbook.yml
         fi
 
   # The vault-* tasks below require .vault-pass to already exist - see

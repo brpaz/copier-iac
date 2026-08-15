@@ -8,6 +8,7 @@
   # https://devenv.sh/packages/
   packages = [
     pkgs.git
+    pkgs.uv
 {% if use_terraform %}
     pkgs.tflint
     pkgs.terraform-docs
@@ -20,7 +21,7 @@
 
   enterShell = ''
 {% if use_terraform %}
-    for env in staging production; do
+    for env in {% if use_staging_environment %}staging {% endif %}production; do
       if [ ! -f "terraform/environments/$env/terraform.tfvars" ]; then
         cp "terraform/environments/$env/terraform.tfvars.example" "terraform/environments/$env/terraform.tfvars"
       fi

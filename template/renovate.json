@@ -19,6 +19,16 @@
             "groupName": "non-major updates",
             "automerge": true,
             "platformAutomerge": true
+        },
+        {
+            "description": "Group GitHub Actions updates",
+            "matchManagers": ["github-actions"],
+            "groupName": "github-actions"
+        },
+        {
+            "description": "Group infrastructure (Terraform/Ansible) updates",
+            "matchManagers": ["terraform", "ansible-galaxy", "pip_requirements"],
+            "groupName": "infrastructure"
         }
     ]
 }

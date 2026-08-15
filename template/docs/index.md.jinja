@@ -1,0 +1,53 @@
+# {{ project_name }}
+
+{{ project_description }}
+{% if use_terraform %}
+
+This project uses [Terraform](https://terraform.io) to provision an [Hetzner Cloud](https://cloud.hetzner.com) server, with [Cloudflare](https://www.cloudflare.com) used to point a domain name at it. The server is bootstrapped via [cloud-init](https://cloudinit.readthedocs.io/).
+{% endif %}
+{% if ansible_enabled %}
+
+{% if use_terraform %}An [Ansible](https://www.ansible.com/) playbook is also included in `ansible/`, for configuring the host(s) after `terraform apply`. Its inventory is dynamic, sourced from Terraform state.{% else %}This project uses [Ansible](https://www.ansible.com/) to configure hosts.{% endif %}
+{% endif %}
+
+## Getting started
+
+1. **Install the toolchain.** [Devenv](https://devenv.sh/) (plus [Direnv](https://direnv.net/), recommended) gives you Task and everything else this project needs, pinned to known-good versions - see [Development Environment](development.md).
+
+2. **Clone and enter the project:**
+
+   ```shell
+   git clone {{ repo_url }}
+   cd {{ project_slug }}
+   direnv allow
+   ```
+
+3. **Generate an SSH key pair** for provisioning access:
+
+   ```shell
+   task gen-ssh-key
+   ```
+{% if use_terraform %}
+
+4. **Set up Terraform variables** for each environment - see [Secrets](secrets.md) for what goes where:
+
+   ```shell
+{% if use_staging_environment %}
+   cp terraform/environments/staging/terraform.tfvars.example terraform/environments/staging/terraform.tfvars
+{% endif %}
+   cp terraform/environments/production/terraform.tfvars.example terraform/environments/production/terraform.tfvars
+   ```
+{% endif %}
+{% if use_ansible and not use_terraform %}
+
+4. **Fill in your inventory** - add your target host(s) to `ansible/inventory/<env>/hosts.ini`.
+{% endif %}
+
+5. **Run tasks.** This project uses [Task](https://taskfile.dev/) as its task runner. Run `task -l` to see everything available, or dig into [Managing Environments](environments.md) and [CI/CD](ci-cd.md) for the full workflow.
+
+## Where to go next
+
+- [CI/CD](ci-cd.md) - what runs in GitHub Actions and when.
+- [Managing Environments](environments.md) - {% if use_staging_environment %}staging vs. production, and how they're kept apart{% else %}how the `production` environment is structured{% endif %}.
+- [Secrets](secrets.md) - every credential this project needs, local and CI.
+- [Development Environment](development.md) - the devenv/direnv/Task setup in detail.

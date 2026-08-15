@@ -14,15 +14,30 @@ on:
     paths:
       - "terraform/**"
       - ".github/workflows/terraform.yml"
+{% endraw %}
+{% if terraform_backend != "local" %}
+{% raw %}
   workflow_dispatch:
     inputs:
       environment:
         description: "Environment to apply"
         type: choice
         options:
+{% endraw %}
+{% if use_staging_environment %}
           - staging
+{% endif %}
+{% raw %}
           - production
-        default: staging
+{% endraw %}
+        default: {% if use_staging_environment %}staging{% else %}production{% endif %}
+{% raw %}
+  schedule:
+    # Daily drift check - catches manual/out-of-band changes to either environment.
+    - cron: "0 6 * * *"
+{% endraw %}
+{% endif %}
+{% raw %}
 
 env:
   TF_VERSION: "1.10.5"
@@ -50,7 +65,6 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TF_VERSION }}
-          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
 
       - uses: terraform-linters/setup-tflint@v6
         name: Setup TFLint
@@ -60,17 +74,49 @@ jobs:
       - name: Check formatting
         run: terraform fmt -check -recursive
 
+      - name: Initialize TFLint
+        run: tflint --init
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: TFLint
         run: tflint --recursive -f compact
+
+      - name: Check terraform-docs is up to date
+        uses: terraform-docs/gh-actions@v1.4.1
+        with:
+          working-dir: terraform/modules/infra
+          config-file: .terraform-docs.yml
+          fail-on-diff: "true"
+
+      - name: Trivy IaC scan
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: "config"
+          scan-ref: "terraform"
+          severity: "CRITICAL,HIGH"
+          exit-code: "1"
+{% endraw %}
+{% if terraform_backend != "local" %}
+{% raw %}
 
   plan:
     name: "Plan (${{ matrix.environment }})"
     runs-on: ubuntu-latest
     needs: lint
+{% endraw %}
+{% if terraform_backend == "s3" %}
+    env:
+      AWS_ACCESS_KEY_ID: {% raw %}${{ secrets.AWS_ACCESS_KEY_ID }}{% endraw %}
+      AWS_SECRET_ACCESS_KEY: {% raw %}${{ secrets.AWS_SECRET_ACCESS_KEY }}{% endraw %}
+{% endif %}
+{% raw %}
     strategy:
       fail-fast: false
       matrix:
-        environment: [staging, production]
+{% endraw %}
+        environment: [{% if use_staging_environment %}staging, {% endif %}production]
+{% raw %}
     permissions:
       contents: read
       pull-requests: write
@@ -85,7 +131,11 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TF_VERSION }}
-          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+{% endraw %}
+{% if terraform_backend == "tfc" %}
+          cli_config_credentials_token: {% raw %}${{ secrets.TF_API_TOKEN }}{% endraw %}
+{% endif %}
+{% raw %}
 
       - name: Terraform Init
         run: terraform init
@@ -165,19 +215,83 @@ jobs:
         with:
           name: plan-${{ matrix.environment }}
           path: terraform/environments/${{ matrix.environment }}/plan.out
+{% endraw %}
+{% if use_staging_environment %}
 
-  apply:
-    name: "Apply (${{ github.event_name == 'push' && 'production' || inputs.environment }})"
-    runs-on: ubuntu-latest
-    # Push to main only ever applies production - staging (or an ad hoc
-    # re-apply of production) requires an explicit, human-selected
-    # workflow_dispatch run. The two never happen in the same run.
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+  # Merging to main auto-applies staging. Production has no native approval
+  # gate available (GitHub's required-reviewers environment protection rule
+  # is public-repo-only below Enterprise), so it is never auto-applied - it
+  # only runs via an explicit, human-triggered workflow_dispatch below.
+  apply-staging:
+    name: "Apply"
     needs: plan
-    environment: ${{ github.event_name == 'push' && 'production' || inputs.environment }}
+    if: {% raw %}github.event_name == 'push' && github.ref == 'refs/heads/main'{% endraw %}
+    uses: ./.github/workflows/terraform-apply.yml
+    with:
+      environment: staging
+    secrets: inherit
+
+  # Manual apply for either environment - the only path to production, and
+  # an escape hatch for an ad hoc re-apply of staging.
+  apply-manual:
+    name: "Apply"
+    needs: plan
+    if: {% raw %}github.event_name == 'workflow_dispatch'{% endraw %}
+    uses: ./.github/workflows/terraform-apply.yml
+    with:
+      environment: {% raw %}${{ inputs.environment }}{% endraw %}
+    secrets: inherit
+{% else %}
+
+  # No staging environment configured - production applies directly on
+  # merge to main. There's no native approval gate available for it either
+  # way (GitHub's required-reviewers environment protection rule is
+  # public-repo-only below Enterprise), so this is equivalent in safety to
+  # gating behind a staging step.
+  apply-production:
+    name: "Apply"
+    needs: plan
+    if: {% raw %}github.event_name == 'push' && github.ref == 'refs/heads/main'{% endraw %}
+    uses: ./.github/workflows/terraform-apply.yml
+    with:
+      environment: production
+    secrets: inherit
+
+  # Escape hatch for an ad hoc re-apply outside the normal push-to-main flow.
+  apply-manual:
+    name: "Apply"
+    needs: plan
+    if: {% raw %}github.event_name == 'workflow_dispatch'{% endraw %}
+    uses: ./.github/workflows/terraform-apply.yml
+    with:
+      environment: {% raw %}${{ inputs.environment }}{% endraw %}
+    secrets: inherit
+{% endif %}
+{% raw %}
+
+  drift:
+    name: "Drift Detection (${{ matrix.environment }})"
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+{% endraw %}
+{% if terraform_backend == "s3" %}
+    env:
+      AWS_ACCESS_KEY_ID: {% raw %}${{ secrets.AWS_ACCESS_KEY_ID }}{% endraw %}
+      AWS_SECRET_ACCESS_KEY: {% raw %}${{ secrets.AWS_SECRET_ACCESS_KEY }}{% endraw %}
+{% endif %}
+{% raw %}
+    strategy:
+      fail-fast: false
+      matrix:
+{% endraw %}
+        environment: [{% if use_staging_environment %}staging, {% endif %}production]
+{% raw %}
+    permissions:
+      contents: read
+      issues: write
     defaults:
       run:
-        working-directory: terraform/environments/${{ github.event_name == 'push' && 'production' || inputs.environment }}
+        working-directory: terraform/environments/${{ matrix.environment }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -186,7 +300,11 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TF_VERSION }}
-          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+{% endraw %}
+{% if terraform_backend == "tfc" %}
+          cli_config_credentials_token: {% raw %}${{ secrets.TF_API_TOKEN }}{% endraw %}
+{% endif %}
+{% raw %}
 
       - name: Terraform Init
         run: terraform init
@@ -200,24 +318,48 @@ jobs:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           SSH_PRIVATE_KEY_FILE: ${{ env.TF_VAR_ssh_priv_key_file }}
 
-      - name: Download plan artifact
-        uses: actions/download-artifact@v6
-        with:
-          name: plan-${{ github.event_name == 'push' && 'production' || inputs.environment }}
-          path: terraform/environments/${{ github.event_name == 'push' && 'production' || inputs.environment }}
-{% endraw %}
-{% if terraform_provisioner == 'ansible' %}
-
-      - name: Install Ansible
-        run: pip install ansible
-{% endif %}
-{% raw %}
-
-      - name: Terraform apply
+      - name: Terraform Plan
+        id: plan
         run: |
-          terraform apply \
-            -auto-approve \
-            -input=false \
-            -no-color \
-            plan.out
+          set +e
+          terraform plan -no-color -input=false -detailed-exitcode
+          echo "exitcode=$?" >> "$GITHUB_OUTPUT"
+          set -e
+
+      - name: Fail on plan error
+        if: steps.plan.outputs.exitcode == '1'
+        run: exit 1
+
+      - name: Open or update drift issue
+        if: steps.plan.outputs.exitcode == '2'
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const title = `Terraform drift detected: ${{ matrix.environment }}`;
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+              labels: "terraform-drift",
+            });
+            const existing = issues.find(issue => issue.title === title);
+            const body = `Scheduled drift check found changes outside Terraform for **${{ matrix.environment }}**.\n\nRun: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\n\nReconcile by applying Terraform or updating the config to match reality, then close this issue.`;
+            if (existing) {
+              github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body,
+              });
+            } else {
+              github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ["terraform-drift"],
+              });
+            }
 {% endraw %}
+{% endif %}

@@ -9,3 +9,6 @@ devenv.local.nix
 
 # Log files
 *.log
+
+# Zensical build output
+/site/
